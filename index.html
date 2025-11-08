@@ -1,0 +1,1478 @@
+
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown 投影片生成器 (v16 - 移除字體滑桿)</title>
+    
+    <style>
+        :root {
+            --color-background: #fcfcf9;
+            --color-surface: #fffffe;
+            --color-text: #13343b;
+            --color-text-secondary: #626c71;
+            --color-primary: #21808d;
+            --color-primary-hover: #1d7480;
+            --color-border: rgba(94, 82, 64, 0.2);
+            --color-secondary: rgba(94, 82, 64, 0.12);
+            --color-secondary-hover: rgba(94, 82, 64, 0.2);
+            --color-bg-1: rgba(59, 130, 246, 0.08);
+            --color-focus-ring: rgba(33, 128, 141, 0.4);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--color-background);
+            color: var(--color-text);
+            line-height: 1.5;
+        }
+        
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .top-bar {
+            background-color: var(--color-surface);
+            border-bottom: 1px solid var(--color-border);
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .top-bar h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--color-primary);
+        }
+        
+        .navigation-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .slide-counter {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--color-text-secondary);
+            min-width: 80px;
+            text-align: center;
+        }
+        
+        .theme-bar {
+            background-color: var(--color-background);
+            border-bottom: 1px solid var(--color-border);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        
+        .theme-bar-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--color-text);
+        }
+        
+        .theme-selector {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .theme-option {
+            padding: 6px 10px;
+            border: 2px solid var(--color-border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            background-color: var(--color-surface);
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .theme-option div:first-child {
+            font-weight: 500;
+        }
+        
+        .theme-option:hover {
+            border-color: var(--color-primary);
+        }
+        
+        .theme-option.active {
+            border-color: var(--color-primary);
+            background-color: var(--color-bg-1);
+            box-shadow: 0 0 0 3px var(--color-focus-ring);
+        }
+        
+        .theme-colors {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+        
+        .color-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        
+        .main-content {
+            flex: 1;
+            display: flex;
+            gap: 16px;
+            padding: 16px;
+            overflow: hidden;
+        }
+        
+        .left-panel {
+            width: 30%;
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .panel-header {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--color-text);
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .markdown-editor {
+            flex: 1;
+            width: 100%;
+            padding: 16px;
+            font-family: monospace;
+            font-size: 12px;
+            background-color: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 12px;
+            color: var(--color-text);
+            resize: none;
+            outline: none;
+            line-height: 1.6;
+        }
+        
+        .markdown-editor:focus {
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px var(--color-focus-ring);
+        }
+        
+        .editor-hint {
+            font-size: 12px;
+            color: var(--color-text-secondary);
+            padding: 8px;
+            background-color: var(--color-bg-1);
+            border-radius: 8px;
+            border: 1px solid var(--color-border);
+        }
+        
+        .center-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--color-surface);
+            border-radius: 12px;
+            border: 1px solid var(--color-border);
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .slide-container {
+            width: 100%;
+            max-width: 900px;
+            aspect-ratio: 16 / 9;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            padding: 60px;
+            position: relative;
+            overflow: hidden;
+            transition: background 0.3s ease;
+        }
+        
+        .slide {
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            justify-content: flex-start;
+            position: relative;
+            padding-top: 20px;
+            /* (移除) transition: font-size 0.2s ease; */
+        }
+        
+        .slide.active {
+            display: flex;
+        }
+        
+        .slide.fade-enter {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        .slide.slide-enter {
+            animation: slideIn 0.5s ease-in-out;
+        }
+        
+        .slide.zoom-enter {
+            animation: zoomIn 0.5s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes zoomIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        
+        /* (修改) 預設字體大小改回 CSS 控制 */
+        .slide h1 {
+            font-size: 3em;
+            font-weight: 600;
+            margin-bottom: 20px;
+            line-height: 1.2;
+        }
+        
+        .slide h2 {
+            font-size: 2em;
+            font-weight: 600;
+            margin-bottom: 16px;
+            line-height: 1.2;
+        }
+        
+        .slide h3 {
+            font-size: 1.5em;
+            font-weight: 600;
+            margin-bottom: 12px;
+            margin-top: 24px;
+        }
+        
+        .slide p {
+            font-size: 1.2em;
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+        
+        .slide ul, .slide ol {
+            margin-left: 30px;
+            margin-bottom: 16px;
+        }
+        
+        .slide li {
+            font-size: 1.2em;
+            line-height: 1.8;
+            margin-bottom: 8px;
+        }
+        
+        .slide strong {
+            font-weight: 600;
+        }
+        
+        .slide-number {
+            position: absolute;
+            bottom: 20px;
+            right: 30px;
+            font-size: 0.9em;
+            opacity: 0.5;
+        }
+
+        .thumbnail-bar {
+            width: 100%;
+            max-width: 900px;
+            height: 90px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            display: flex;
+            gap: 8px;
+            padding: 8px;
+            margin-top: 12px;
+            background-color: var(--color-background);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+        }
+
+        .thumbnail-item {
+            height: 72px;
+            aspect-ratio: 16 / 9;
+            flex-shrink: 0;
+            border: 2px solid var(--color-border);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            overflow: hidden;
+            position: relative;
+            background-color: var(--color-surface);
+            padding: 4px;
+        }
+        
+        .thumbnail-item:hover {
+            border-color: var(--color-primary-hover);
+        }
+        
+        .thumbnail-item.active {
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px var(--color-focus-ring);
+        }
+
+        .thumbnail-item .slide-number { display: none; }
+        .thumbnail-item h1 { font-size: 8px; margin-bottom: 2px; line-height: 1.1; }
+        .thumbnail-item h2 { font-size: 7px; margin-bottom: 2px; line-height: 1.1; }
+        .thumbnail-item h3 { font-size: 6px; margin-bottom: 2px; line-height: 1.1; }
+        .thumbnail-item p, .thumbnail-item li { font-size: 5px; line-height: 1.1; margin-bottom: 1px; }
+        .thumbnail-item ul, .thumbnail-item ol { margin-left: 5px; }
+        
+        .center-controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        /* (移除) .preview-controls */
+        
+        .right-panel {
+            width: 280px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            overflow-y: auto;
+            padding: 12px;
+            background-color: var(--color-surface);
+            border-radius: 12px;
+            border: 1px solid var(--color-border);
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .right-panel details {
+            border-bottom: 1px solid var(--color-border);
+            padding-bottom: 16px;
+            margin-bottom: 8px;
+        }
+        .right-panel details:last-of-type {
+            border-bottom: none;
+            padding-bottom: 0;
+            margin-bottom: 0;
+        }
+        .right-panel summary {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--color-text);
+            cursor: pointer;
+            padding: 8px 0;
+            list-style: none;
+        }
+        .right-panel summary::before {
+            content: '▶';
+            margin-right: 8px;
+            font-size: 0.8em;
+            display: inline-block;
+            transition: transform 0.2s ease;
+        }
+        .right-panel details[open] > summary::before {
+            transform: rotate(90deg);
+        }
+        .right-panel details > .control-group {
+            padding-top: 12px;
+            padding-left: 4px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .control-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--color-text);
+            margin-bottom: 4px;
+        }
+        
+        .slider-control {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .slider-value {
+            font-size: 12px;
+            color: var(--color-text-secondary);
+            text-align: right;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: var(--color-secondary);
+            border-radius: 9999px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--color-primary);
+            cursor: pointer;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: var(--color-primary);
+            cursor: pointer;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+        
+        select.form-control,
+        input[type="number"].form-control {
+            width: 100%;
+            padding: 8px 12px;
+            font-size: 14px;
+            background-color: var(--color-background);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            color: var(--color-text);
+            outline: none;
+        }
+        select.form-control { cursor: pointer; }
+        
+        select.form-control:focus,
+        input[type="number"].form-control:focus {
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px var(--color-focus-ring);
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        
+        .btn-primary {
+            background-color: var(--color-primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--color-primary-hover);
+        }
+        
+        .btn-secondary {
+            background-color: var(--color-secondary);
+            color: var(--color-text);
+        }
+        
+        .btn-secondary:hover {
+            background-color: var(--color-secondary-hover);
+        }
+
+        .btn-sm {
+            padding: 4px 10px;
+            font-size: 12px;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-full {
+            width: 100%;
+        }
+        
+        #progressBar {
+            height: 100%;
+            background: var(--color-primary);
+            width: 0%;
+            transition: width 0.3s;
+            border-radius: 9999px;
+        }
+        
+        @media (max-width: 900px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .left-panel,
+            .right-panel {
+                width: 100%;
+                min-width: unset;
+                overflow-y: visible;
+            }
+            
+            .center-panel {
+                min-height: 400px;
+                padding: 16px;
+            }
+        }
+
+        .empty-slide-content {
+            text-align: center;
+            color: #999;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: var(--color-primary);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="toastContainer"></div>
+
+    <div class="app-container">
+         <div class="theme-bar">
+            <span class="theme-bar-label">🎨 主題配色:</span>
+            <div class="theme-selector" id="themeSelector">
+                 <div class="theme-option active" data-theme="modern-blue">
+                    <div>現代藍</div>
+                    <div class="theme-colors">
+                        <div class="color-dot" style="background-color: #1e40af;"></div>
+                        <div class="color-dot" style="background-color: #3b82f6;"></div>
+                        <div class="color-dot" style="background-color: #f0f9ff;"></div>
+                    </div>
+                </div>
+                <div class="theme-option" data-theme="warm-sunset">
+                    <div>溫暖日落</div>
+                    <div class="theme-colors">
+                        <div class="color-dot" style="background-color: #ea580c;"></div>
+                        <div class="color-dot" style="background-color: #f97316;"></div>
+                        <div class="color-dot" style="background-color: #fff7ed;"></div>
+                    </div>
+                </div>
+                <div class="theme-option" data-theme="forest-green">
+                    <div>森林綠</div>
+                    <div class="theme-colors">
+                        <div class="color-dot" style="background-color: #15803d;"></div>
+                        <div class="color-dot" style="background-color: #22c55e;"></div>
+                        <div class="color-dot" style="background-color: #f0fdf4;"></div>
+                    </div>
+                </div>
+                <div class="theme-option" data-theme="purple-dream">
+                    <div>紫色夢幻</div>
+                    <div class="theme-colors">
+                        <div class="color-dot" style="background-color: #6d28d9;"></div>
+                        <div class="color-dot" style="background-color: #a855f7;"></div>
+                        <div class="color-dot" style="background-color: #faf5ff;"></div>
+                    </div>
+                </div>
+                <div class="theme-option" data-theme="dark-mode">
+                    <div>暗黑模式</div>
+                    <div class="theme-colors">
+                        <div class="color-dot" style="background-color: #1f2937;"></div>
+                        <div class="color-dot" style="background-color: #60a5fa;"></div>
+                        <div class="color-dot" style="background-color: #111827;"></div>
+                    </div>
+                </div>
+                <div class="theme-option" data-theme="aqua-fresh">
+                    <div>海洋青</div>
+                    <div class="theme-colors">
+                        <div class="color-dot" style="background-color: #0891b2;"></div>
+                        <div class="color-dot" style="background-color: #22d3ee;"></div>
+                        <div class="color-dot" style="background-color: #f8fafc;"></div>
+                    </div>
+                </div>
+                <div class="theme-option" data-theme="crimson-focus">
+                    <div>鮮紅焦點</div>
+                    <div class="theme-colors">
+                        <div class="color-dot" style="background-color: #dc2626;"></div>
+                        <div class="color-dot" style="background-color: #f87171;"></div>
+                        <div class="color-dot" style="background-color: #1f2937;"></div>
+                    </div>
+                </div>
+                <div class="theme-option" data-theme="sand-classic">
+                    <div>沙色經典</div>
+                    <div class="theme-colors">
+                        <div class="color-dot" style="background-color: #a16207;"></div>
+                        <div class="color-dot" style="background-color: #ca8a04;"></div>
+                        <div class="color-dot" style="background-color: #fefce8;"></div>
+                    </div>
+                </div>
+                <div class="theme-option" data-theme="teal-minimal">
+                    <div>水鴨極簡</div>
+                    <div class="theme-colors">
+                        <div class="color-dot" style="background-color: #0d9488;"></div>
+                        <div class="color-dot" style="background-color: #2dd4bf;"></div>
+                        <div class="color-dot" style="background-color: #f0fdfa;"></div>
+                    </div>
+                </div>
+                <div class="theme-option" data-theme="amber-night">
+                    <div>琥珀夜</div>
+                    <div class="theme-colors">
+                        <div class="color-dot" style="background-color: #d97706;"></div>
+                        <div class="color-dot" style="background-color: #f59e0b;"></div>
+                        <div class="color-dot" style="background-color: #1f2937;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="left-panel">
+                
+                <textarea class="markdown-editor" id="markdownInput" placeholder="在此輸入 Markdown 內容..."></textarea>
+                  <div class="editor-hint">💡 提示：使用 --- 來分隔投影片</div>
+                  <button class="btn btn-secondary btn-sm" onclick="loadExample()">載入範例</button>
+                                
+                
+            </div>
+
+            <div class="center-panel">
+                <div class="slide-container" id="slideContainer">
+                    </div>
+                
+                <div class="thumbnail-bar" id="thumbnailBar">
+                    </div>
+                
+                <div class="center-controls">
+                    <div class="navigation-controls">
+                        <button class="btn btn-secondary" id="prevBtn" onclick="previousSlide()" disabled>← 上一頁</button>
+                        <span class="slide-counter" id="slideCounter">0 / 0</span>
+                        <button class="btn btn-secondary" id="nextBtn" onclick="nextSlide()" disabled>下一頁 →</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <details open>
+                    <summary>🎨 預覽與外觀</summary>
+                    <div class="control-group">
+                        
+                        <div class="control-group">
+                            <label class="control-label">切換動畫</label>
+                            <select class="form-control" id="animationSelect">
+                                <option value="fade">淡入淡出</option>
+                                <option value="slide">滑動</option>
+                                <option value="zoom">縮放</option>
+                            </select>
+                        </div>
+
+                        <div class="control-group">
+                            <label class="control-label">標題對齊 (H1, H2, H3)</label>
+                            <select class="form-control" id="titleAlignmentSelect">
+                                <option value="left">靠左對齊</option>
+                                <option value="center">置中對齊</option>
+                                <option value="right">靠右對齊</option>
+                            </select>
+                        </div>
+
+                        <div class="control-group">
+                            <label class="control-label">內文對齊</label>
+                            <select class="form-control" id="alignmentSelect">
+                                <option value="left">靠左對齊</option>
+                                <option value="center">置中對齊</option>
+                                <option value="right">靠右對齊</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label">背景樣式</label>
+                            <select class="form-control" id="backgroundSelect">
+                                <option value="solid">純色</option>
+                                <option value="gradient">漸層</option>
+                            </select>
+                        </div>
+                    </div>
+                </details>
+
+                <details>
+                    <summary>🖋️ 匯出與工具</summary>
+                    <div class="control-group">
+                         <div class="control-group">
+                            <label class="control-label">H1 標題 (em)</label>
+                            <input type="number" class="form-control" id="exportH1Size" value="4" step="0.1">
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label">H2 副標 (em)</label>
+                            <input type="number" class="form-control" id="exportH2Size" value="3" step="0.1">
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label">內文/項目 (em)</label>
+                            <input type="number" class="form-control" id="exportPSize" value="2" step="0.1">
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">其他功能</label>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <button class="btn btn-primary btn-full" onclick="toggleFullscreen()">🖥️ 全螢幕簡報</button>
+                            <button class="btn btn-secondary btn-full" onclick="exportToHTML()">💾 匯出 HTML</button>
+                            <button class="btn btn-secondary btn-full" onclick="resetPresentation()">🔄 重設簡報</button>
+                        </div>
+                    </div>
+                </details>
+
+                <div class="control-group" style="margin-top: auto; padding-top: 16px; border-top: 1px solid var(--color-border);">
+                    <label class="control-label">投影片進度</label>
+                    <div style="width: 100%; height: 6px; background: var(--color-secondary); border-radius: 9999px; overflow: hidden;">
+                        <div id="progressBar"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- (v10) 範例 Markdown 內容 ---
+        const exampleMarkdown = `# 我的簡報標題
+
+歡迎使用 Markdown 投影片生成器！
+
+---
+
+## 主要功能
+
+- 輕鬆用 Markdown 寫投影片
+- 多種主題配色可選
+- 可自訂預覽和匯出樣式
+
+---
+
+## 如何使用
+
+1.  在左側編輯器輸入內容
+2.  使用 \`- - -\` 分隔每一頁投影片
+3.  在右側調整樣式和設定
+4.  完成後即可匯出或全螢幕播放！
+
+**就是這麼簡單！**`;
+
+        // --- (v10) Toast 通知函式 ---
+        function showToast(message) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+                toast.addEventListener('transitionend', () => toast.remove());
+            }, 3000);
+        }
+
+        // --- (v10) 載入範例函式 ---
+        function loadExample() {
+            const markdownInput = document.getElementById('markdownInput');
+            markdownInput.value = exampleMarkdown;
+            markdownInput.dispatchEvent(new Event('input', { bubbles: true }));
+            showToast('範例內容已載入！');
+        }
+        
+        // --- 全域變數 ---
+        let slides = [];
+        let currentSlide = 0;
+        let currentTheme = {
+            name: 'modern-blue',
+            primary: '#1e40af',
+            accent: '#3b82f6',
+            background: '#f0f9ff'
+        };
+        // (移除) let fontSize = 16;
+        let animation = 'fade'; 
+        let alignment = 'left';
+        let titleAlignment = 'left'; 
+        let backgroundStyle = 'solid';
+
+        const themes = {
+            'modern-blue': { primary: '#1e40af', accent: '#3b82f6', background: '#f0f9ff' },
+            'warm-sunset': { primary: '#ea580c', accent: '#f97316', background: '#fff7ed' },
+            'forest-green': { primary: '#15803d', accent: '#22c55e', background: '#f0fdf4' },
+            'purple-dream': { primary: '#6d28d9', accent: '#a855f7', background: '#faf5ff' },
+            'dark-mode': { primary: '#1f2937', accent: '#60a5fa', background: '#111827', textColor: '#f3f4f6' },
+            'aqua-fresh': { primary: '#0891b2', accent: '#22d3ee', background: '#f8fafc' },
+            'crimson-focus': { primary: '#dc2626', accent: '#f87171', background: '#1f2937', textColor: '#f9fafb' },
+            'sand-classic': { primary: '#a16207', accent: '#ca8a04', background: '#fefce8' },
+            'teal-minimal': { primary: '#0d9488', accent: '#2dd4bf', background: '#f0fdfa' },
+            'amber-night': { primary: '#d97706', accent: '#f59e0b', background: '#1f2937', textColor: '#f9fafb' }
+        };
+
+        // --- 核心函式 ---
+        function parseMarkdown(markdown) {
+            if (!markdown.trim()) return [];
+            const slideTexts = markdown.split(/---+/).filter(s => s.trim());
+            
+            return slideTexts.map((text, index) => {
+                const lines = text.trim().split('\n');
+                let content = '';
+                let inList = false;
+                let listType = '';
+        
+                lines.forEach(line => {
+                    const trimmedLine = line.trim();
+                    if (!trimmedLine) { return; }
+                    if (trimmedLine.startsWith('### ')) {
+                        if (inList) { content += (listType === 'ul') ? '</ul>' : '</ol>'; inList = false; }
+                        content += `<h3>${escapeHtml(trimmedLine.substring(4))}</h3>`;
+                    } else if (trimmedLine.startsWith('## ')) {
+                        if (inList) { content += (listType === 'ul') ? '</ul>' : '</ol>'; inList = false; }
+                        content += `<h2>${escapeHtml(trimmedLine.substring(3))}</h2>`;
+                    } else if (trimmedLine.startsWith('# ')) {
+                        if (inList) { content += (listType === 'ul') ? '</ul>' : '</ol>'; inList = false; }
+                        content += `<h1>${escapeHtml(trimmedLine.substring(2))}</h1>`;
+                    } else if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ')) {
+                        if (!inList || listType !== 'ul') {
+                            if (inList) content += '</ol>';
+                            content += '<ul>';
+                            inList = true;
+                            listType = 'ul';
+                        }
+                        content += `<li>${formatInline(trimmedLine.substring(2))}</li>`;
+                    } else if (/^\d+\.\s/.test(trimmedLine)) {
+                        if (!inList || listType !== 'ol') {
+                            if (inList) content += '</ul>';
+                            content += '<ol>';
+                            inList = true;
+                            listType = 'ol';
+                        }
+                        content += `<li>${formatInline(trimmedLine.replace(/^\d+\.\s/, ''))}</li>`;
+                    } else {
+                        if (inList) { 
+                            content += (listType === 'ul') ? '</ul>' : '</ol>'; 
+                            inList = false; 
+                        }
+                        content += `<p>${formatInline(trimmedLine)}</p>`;
+                    }
+                });
+                
+                if (inList) {
+                    content += (listType === 'ul') ? '</ul>' : '</ol>';
+                }
+                return { content };
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatInline(text) {
+            text = escapeHtml(text);
+            text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            return text;
+        }
+
+        function renderSlides() {
+            const container = document.getElementById('slideContainer');
+            const thumbBar = document.getElementById('thumbnailBar');
+            container.innerHTML = '';
+            thumbBar.innerHTML = '';
+            
+            if (slides.length === 0) {
+                container.innerHTML = `
+                    <div class="slide active" id="emptySlide" style="justify-content: center; padding-top: 0;">
+                        <div class="empty-slide-content">
+                            <h2>👋 歡迎使用投影片生成器</h2>
+                            <p style="margin-top: 20px;">請在左側輸入 Markdown 內容或載入範例</p>
+                        </div>
+                    </div>
+                `;
+                thumbBar.style.display = 'none';
+                
+                updateNavigation();
+                applyTheme(); 
+                return;
+            }
+            
+            thumbBar.style.display = 'flex';
+            
+            slides.forEach((slide, index) => {
+                const slideDiv = document.createElement('div');
+                slideDiv.className = 'slide';
+                if (index === currentSlide) {
+                    slideDiv.classList.add('active');
+                }
+                slideDiv.innerHTML = slide.content + `<div class="slide-number">${index + 1}</div>`;
+                container.appendChild(slideDiv);
+
+                const thumbDiv = document.createElement('div');
+                thumbDiv.className = 'thumbnail-item';
+                if (index === currentSlide) {
+                    thumbDiv.classList.add('active');
+                }
+                thumbDiv.dataset.index = index;
+                thumbDiv.innerHTML = slide.content;
+                
+                thumbDiv.addEventListener('click', () => {
+                    changeSlide(index);
+                });
+                
+                thumbBar.appendChild(thumbDiv);
+            });
+            
+            applyTheme();
+            applyPreviewSettings();
+            updateNavigation();
+        }
+
+        function applyTheme() {
+            const container = document.getElementById('slideContainer');
+            
+            if (backgroundStyle === 'gradient') {
+                container.style.background = `linear-gradient(135deg, ${currentTheme.background} 0%, ${currentTheme.accent}22 100%)`;
+            } else {
+                container.style.background = currentTheme.background;
+            }
+            
+            const slideElements = document.querySelectorAll('.slide-container .slide:not(#emptySlide)');
+            slideElements.forEach(slide => {
+                const textColor = currentTheme.textColor || '#1f2937';
+                slide.style.color = textColor;
+                
+                slide.querySelectorAll('h1').forEach(h => h.style.color = currentTheme.primary);
+                slide.querySelectorAll('h2').forEach(h => h.style.color = currentTheme.accent);
+                slide.querySelectorAll('h3').forEach(h => h.style.color = currentTheme.accent);
+                slide.querySelectorAll('p').forEach(p => p.style.color = textColor);
+                slide.querySelectorAll('li').forEach(li => li.style.color = textColor);
+            });
+        }
+
+        // --- (修改) 移除 fontSize 設定 ---
+        function applyPreviewSettings() {
+            const slideElements = document.querySelectorAll('.slide-container .slide:not(#emptySlide)');
+            slideElements.forEach(slide => {
+                // (移除) slide.style.fontSize = `${fontSize}px`;
+                slide.style.textAlign = alignment;
+                
+                slide.querySelectorAll('h1, h2, h3').forEach(h => {
+                    h.style.textAlign = titleAlignment;
+                });
+            });
+        }
+
+        // --- 導覽函式 ---
+        function nextSlide() {
+            if (currentSlide < slides.length - 1) {
+                changeSlide(currentSlide + 1);
+            }
+        }
+
+        function previousSlide() {
+            if (currentSlide > 0) {
+                changeSlide(currentSlide - 1);
+            }
+        }
+
+        function changeSlide(newIndex) {
+            if (newIndex === currentSlide && slides.length > 0) return;
+
+            const slideElements = document.querySelectorAll('.slide-container .slide');
+            const thumbElements = document.querySelectorAll('.thumbnail-bar .thumbnail-item');
+            
+            if (slideElements.length === 0) return;
+            
+            if (slideElements[currentSlide]) {
+                slideElements[currentSlide].classList.remove('active');
+                slideElements[currentSlide].classList.remove(`${animation}-enter`);
+            }
+            if (thumbElements[currentSlide]) {
+                thumbElements[currentSlide].classList.remove('active');
+            }
+            
+            currentSlide = newIndex;
+            
+            if (slideElements[currentSlide]) {
+                slideElements[currentSlide].classList.add('active');
+                slideElements[currentSlide].classList.add(`${animation}-enter`);
+                
+                setTimeout(() => {
+                    if (slideElements[currentSlide]) {
+                        slideElements[currentSlide].classList.remove(`${animation}-enter`);
+                    }
+                }, 500);
+            }
+            
+            if (thumbElements[currentSlide]) {
+                thumbElements[currentSlide].classList.add('active');
+                thumbElements[currentSlide].scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest',
+                    inline: 'center'
+                });
+            }
+            
+            updateNavigation();
+        }
+
+        function updateNavigation() {
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const counter = document.getElementById('slideCounter');
+            
+            if (slides.length === 0) {
+                prevBtn.disabled = true;
+                nextBtn.disabled = true;
+                counter.textContent = '0 / 0';
+            } else {
+                prevBtn.disabled = currentSlide === 0;
+                nextBtn.disabled = currentSlide === slides.length - 1;
+                counter.textContent = `${currentSlide + 1} / ${slides.length}`;
+            }
+            
+            updateProgressBar();
+        }
+
+        function updateProgressBar() {
+            const progressBar = document.getElementById('progressBar');
+            if (slides.length === 0) {
+                progressBar.style.width = '0%';
+            } else {
+                const progress = ((currentSlide + 1) / slides.length) * 100;
+                progressBar.style.width = `${progress}%`;
+            }
+        }
+
+        function exportToHTML() {
+            if (slides.length === 0) {
+                alert('請先輸入 Markdown 內容！');
+                return;
+            }
+
+            let fileName = 'presentation.html';
+            if (slides.length > 0) {
+                const firstSlideContent = slides[0].content;
+                const titleMatch = firstSlideContent.match(/<h1>(.*?)<\/h1>/i);
+                if (titleMatch && titleMatch[1]) {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = titleMatch[1];
+                    let cleanTitle = tempDiv.textContent || tempDiv.innerText || '';
+                    cleanTitle = cleanTitle.trim().replace(/[<>:"/\\|?*]+/g, '_');
+                    if (cleanTitle) {
+                        fileName = `${cleanTitle}.html`;
+                    }
+                }
+            }
+            
+            const exportH1 = document.getElementById('exportH1Size').value || '3.5';
+            const exportH2 = document.getElementById('exportH2Size').value || '2.5';
+            const exportP = document.getElementById('exportPSize').value || '1.3';
+            const exportH3 = (parseFloat(exportH2) * 0.72).toFixed(2);
+            const exportLi = exportP;
+            
+            const htmlContent = `<!DOCTYPE html>
+        <html lang="zh-TW">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>我的簡報</title>
+            <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            margin: 0; 
+            padding: 0; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            overflow: hidden;
+        }
+        .slide-container { 
+            width: 100vw; 
+            height: 100vh; 
+            display: flex; 
+            align-items: flex-start;
+            justify-content: center; 
+            background: ${backgroundStyle === 'gradient' ? `linear-gradient(135deg, ${currentTheme.background} 0%, ${currentTheme.accent}22 100%)` : currentTheme.background};
+            padding: 40px;
+        }
+        .slide { 
+            width: 100%;
+            max-width: 1400px;
+            height: 100%;
+            max-height: 800px;
+            padding: 80px 120px;
+            display: none;
+            flex-direction: column;
+            justify-content: flex-start;
+            font-size: 16px;
+            text-align: ${alignment};
+            color: ${currentTheme.textColor || '#1f2937'};
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            overflow-y: auto;
+        }
+        .slide.active { display: flex; }
+        
+        .slide.fade-enter { animation: fadeIn 0.5s ease-in-out; }
+        .slide.slide-enter { animation: slideIn 0.5s ease-in-out; }
+        .slide.zoom-enter { animation: zoomIn 0.5s ease-in-out; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes zoomIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        
+        h1 { 
+            font-size: ${exportH1}em;
+            color: ${currentTheme.primary}; 
+            margin-bottom: 40px;
+            margin-top: 0; 
+            line-height: 1.2;
+            font-weight: 600;
+            text-align: ${titleAlignment}; 
+        }
+        h2 { 
+            font-size: ${exportH2}em;
+            color: ${currentTheme.accent}; 
+            margin-bottom: 35px;
+            margin-top: 0; 
+            line-height: 1.2;
+            font-weight: 600;
+            text-align: ${titleAlignment}; 
+        }
+        h3 { 
+            font-size: ${exportH3}em;
+            color: ${currentTheme.accent}; 
+            margin-bottom: 20px;
+            margin-top: 24px; 
+            font-weight: 600;
+            text-align: ${titleAlignment}; 
+        }
+        p {
+            font-size: ${exportP}em;
+            line-height: 1.7;
+            margin-bottom: 20px;
+        }
+        ul, ol {
+            margin-left: 40px;
+            margin-bottom: 25px;
+        }
+        li {
+            font-size: ${exportLi}em;
+            line-height: 1.9;
+            margin-bottom: 15px;
+        }
+        strong {
+            font-weight: 600;
+        }
+        .nav { 
+            position: fixed; 
+            bottom: 30px; 
+            right: 30px; 
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+        button { 
+            padding: 12px 24px; 
+            cursor: pointer; 
+            border: none; 
+            border-radius: 8px; 
+            background: ${currentTheme.primary}; 
+            color: white; 
+            font-weight: 500;
+            font-size: 15px;
+            transition: all 0.2s;
+        }
+        button:hover { 
+            background: ${currentTheme.accent}; 
+            transform: translateY(-2px);
+        }
+        button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+        #counter {
+            color: #333; 
+            font-weight: 600; 
+            font-size: 15px;
+            min-width: 60px;
+            text-align: center;
+        }
+        .fullscreen-btn {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.95);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 500;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            z-index: 100;
+        }
+        .fullscreen-btn:hover {
+            background: white;
+        }
+        
+        @media (max-width: 768px) {
+            .slide {
+                padding: 40px;
+                font-size: 14px;
+            }
+            h1 { font-size: 2.5em; }
+            h2 { font-size: 2em; }
+            h3 { font-size: 1.5em; }
+        }
+            </style>
+        </head>
+        <body>
+            <button class="fullscreen-btn" onclick="toggleFullscreen()">🖥️ 全螢幕</button>
+            <div class="slide-container">
+        ${slides.map((slide, i) => `<div class="slide ${i === 0 ? 'active' : ''}">${slide.content}</div>`).join('')}
+            </div>
+            <div class="nav">
+        <button id="prevBtn" onclick="prev()">← 上一頁</button>
+        <span id="counter">1 / ${slides.length}</span>
+        <button id="nextBtn" onclick="next()">下一頁 →</button>
+            </div>
+            
+            <script>
+        let current = 0;
+        const slides = document.querySelectorAll('.slide');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const animationName = "${animation}";
+        
+        function updateButtons() {
+            prevBtn.disabled = current === 0;
+            nextBtn.disabled = current === slides.length - 1;
+        }
+        
+        function show(n) {
+            if (n === current) return;
+            
+            if (slides[current]) {
+                slides[current].classList.remove('active');
+                slides[current].classList.remove(animationName + '-enter');
+            }
+            
+            current = n;
+            
+            if (slides[current]) {
+                slides[current].classList.add('active');
+                slides[current].classList.add(animationName + '-enter');
+                
+                setTimeout(() => {
+                    if (slides[current]) {
+                        slides[current].classList.remove(animationName + '-enter');
+                    }
+                }, 500);
+            }
+            
+            document.getElementById('counter').textContent = (current + 1) + ' / ' + slides.length;
+            updateButtons();
+        }
+        
+        function next() { 
+            if (current < slides.length - 1) show(current + 1); 
+        }
+        
+        function prev() { 
+            if (current > 0) show(current - 1); 
+        }
+        
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+        
+        document.addEventListener('keydown', e => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                e.preventDefault();
+                next();
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                prev();
+            } else if (e.key === 'f' || e.key === 'F') {
+                toggleFullscreen();
+            }
+        });
+        
+        updateButtons();
+            <\/script>
+        </body>
+        </html>`;
+            
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            
+            a.download = fileName; 
+            
+            a.href = url;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            showToast('HTML 檔案匯出成功！');
+        }
+
+        function toggleFullscreen() {
+            const container = document.querySelector('.slide-container');
+            if (!document.fullscreenElement) {
+                container.requestFullscreen().catch(err => {
+                    alert('無法進入全螢幕模式');
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        function resetPresentation() {
+            if (confirm('確定要清空所有內容嗎？')) {
+                document.getElementById('markdownInput').value = '';
+                slides = [];
+                currentSlide = 0;
+                renderSlides();
+                showToast('簡報已重設');
+            }
+        }
+
+        // --- 事件監聽器 ---
+        document.getElementById('markdownInput').addEventListener('input', (e) => {
+            const markdown = e.target.value;
+            slides = parseMarkdown(markdown);
+            currentSlide = Math.min(currentSlide, slides.length - 1);
+            if (slides.length === 0) currentSlide = 0;
+            renderSlides();
+        });
+        
+        document.querySelectorAll('.theme-option').forEach(option => {
+            option.addEventListener('click', function() {
+                document.querySelectorAll('.theme-option').forEach(opt => 
+                    opt.classList.remove('active')
+                );
+                this.classList.add('active');
+                
+                const themeName = this.dataset.theme;
+                currentTheme = { name: themeName, ...themes[themeName] };
+                applyTheme();
+            });
+        });
+        
+        // (移除) fontSizeSlider 的監聽器
+        
+        document.getElementById('animationSelect').addEventListener('change', (e) => {
+            animation = e.target.value;
+        });
+        
+        document.getElementById('titleAlignmentSelect').addEventListener('change', (e) => {
+            titleAlignment = e.target.value;
+            applyPreviewSettings();
+        });
+
+        document.getElementById('alignmentSelect').addEventListener('change', (e) => {
+            alignment = e.target.value;
+            applyPreviewSettings();
+        });
+        
+        document.getElementById('backgroundSelect').addEventListener('change', (e) => {
+            backgroundStyle = e.target.value;
+            applyTheme();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') {
+                 return; 
+            }
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                e.preventDefault();
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                previousSlide();
+            }
+        });
+
+        // --- 初始設定 ---
+        // (移除) fontSizeSlider 的初始設定
+        
+        renderSlides(); // 初始載入
+
+    </script>
+</body>
+
+</html>
