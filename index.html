@@ -1473,7 +1473,130 @@
         // (移除) fontSizeSlider 的初始設定
         
         renderSlides(); // 初始載入
+// ===== 簡報生成與通訊模組 =====
 
+/**
+ * 接收幻燈片資料並生成完整的 HTML 內容。
+ * @param {Array<{title: string, content: string}>} slidesData
+ * @returns {string} 完整的 HTML 字串
+ */
+function createSlidesHTML(slidesData) {
+    // 將 Markdown 的簡單語法轉換為 HTML
+    const formatContent = (content) => {
+        return content
+            .replace(/\n/g, '<br>') // 換行
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // 粗體
+            .replace(/\*(.*?)\*/g, '<em>$1</em>'); // 斜體
+    };
+
+    const slidesHTML = slidesData.map((slide, index) => `
+        <section class="slide" id="slide-${index + 1}">
+            <h2>${slide.title}</h2>
+            <div class="content">
+                ${formatContent(slide.content)}
+            </div>
+        </section>
+    `).join('');
+
+    // 這是整個 HTML 檔案的模板
+    return `
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>簡報</title>
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overflow: hidden; background: #333; }
+        .slide {
+            box-sizing: border-box;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            padding: 40px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            background: #f5f5f5;
+            transition: transform 0.4s ease-in-out;
+            transform: translateX(100%);
+        }
+        .slide:first-child { transform: translateX(0); }
+        .slide.active { transform: translateX(0); z-index: 1; }
+        .slide.prev { transform: translateX(-100%); }
+        h2 { font-size: 3em; color: #3b82f6; margin-bottom: 20px; }
+        .content { font-size: 1.5em; line-height: 1.6; color: #333; }
+        .page-number { position: fixed; bottom: 20px; right: 20px; font-size: 1.2em; color: white; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    ${slidesHTML}
+    <div class="page-number"><span id="current-page">1</span> / ${slidesData.length}</div>
+    <script>
+        let current = 0;
+        const slides = document.querySelectorAll('.slide');
+        const pageNumDisplay = document.getElementById('current-page');
+
+        function showSlide(index) {
+            slides.forEach((slide, i) => {
+                slide.classList.remove('active', 'prev');
+                if (i === index) {
+                    slide.classList.add('active');
+                } else if (i < index) {
+                    slide.classList.add('prev');
+                }
+            });
+            pageNumDisplay.textContent = index + 1;
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' && current < slides.length - 1) {
+                current++;
+            } else if (e.key === 'ArrowLeft' && current > 0) {
+                current--;
+            }
+            showSlide(current);
+        });
+    <\/script>
+</body>
+</html>
+    `;
+}
+
+/**
+ * 觸發檔案下載
+ * @param {string} filename - 下載的檔案名稱
+ * @param {string} content - 檔案內容
+ */
+function downloadFile(filename, content) {
+    const blob = new Blob([content], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+// 監聽來自父視窗 (learning_toolkit) 的 message 事件
+window.addEventListener('message', (event) => {
+    // **極其重要的安全檢查**
+    if (event.origin !== 'https://cormort.github.io') {
+        console.warn('收到來源不明的訊息，已忽略:', event.origin);
+        return;
+    }
+
+    const message = event.data;
+    if (message && message.type === 'GENERATE_SLIDES' && message.data) {
+        console.log('收到簡報生成任務，資料:', message.data);
+        
+        // 1. 生成 HTML
+        const finalHTML = createSlidesHTML(message.data);
+        
+        // 2. 觸發下載
+        const today = new Date().toISOString().split('T')[0];
+        downloadFile(`簡報_${today}.html`, finalHTML);
+    }
+});
+
+console.log('✓ Slide Generator 已準備好接收任務');
     </script>
 </body>
 
