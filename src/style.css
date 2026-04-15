@@ -217,7 +217,7 @@ body {
     flex-direction: column;
     justify-content: flex-start;
     position: relative;
-    padding-top: 20px;
+    padding: 40px 60px;
 }
 
 .slide.active {
@@ -254,39 +254,40 @@ body {
 .slide h1 {
     font-size: 3em;
     font-weight: 600;
-    margin-bottom: 20px;
+    margin-bottom: 0.5em;
     line-height: 1.2;
 }
 
 .slide h2 {
     font-size: 2em;
     font-weight: 600;
-    margin-bottom: 16px;
+    margin-bottom: 0.5em;
+    margin-top: 0.5em;
     line-height: 1.2;
 }
 
 .slide h3 {
     font-size: 1.5em;
     font-weight: 600;
-    margin-bottom: 12px;
-    margin-top: 24px;
+    margin-bottom: 0.4em;
+    margin-top: 0.5em;
 }
 
 .slide p {
     font-size: 1.2em;
     line-height: 1.6;
-    margin-bottom: 12px;
+    margin-bottom: 0.6em;
 }
 
 .slide ul, .slide ol {
     margin-left: 30px;
-    margin-bottom: 16px;
+    margin-bottom: 0.8em;
 }
 
 .slide li {
     font-size: 1.2em;
     line-height: 1.8;
-    margin-bottom: 8px;
+    margin-bottom: 0.3em;
 }
 
 .slide strong {
