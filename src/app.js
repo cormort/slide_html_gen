@@ -375,6 +375,12 @@
             ? `linear-gradient(135deg, ${State.currentTheme.background} 0%, ${State.currentTheme.accent}22 100%)`
             : State.currentTheme.background;
         
+        const h1Px = Math.round(parseFloat(h1Size) * 32);
+        const h2Px = Math.round(parseFloat(h2Size) * 24);
+        const h3Px = Math.round(parseFloat(h3Size) * 20);
+        const pPx = Math.round(parseFloat(pSize) * 18);
+        const liPx = pPx;
+        
         return `<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -383,9 +389,9 @@
     <title>我的簡報</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; overflow: hidden; }
-        .slide-container { width: 100vw; height: 100vh; display: flex; align-items: flex-start; justify-content: center; background: ${bgStyle}; padding: 40px; }
-        .slide { width: 100%; max-width: 1400px; height: 100%; max-height: 800px; padding: 80px 120px; display: none; flex-direction: column; justify-content: flex-start; font-size: 16px; text-align: ${State.alignment}; color: ${State.currentTheme.textColor || '#1f2937'}; background: white; border-radius: 16px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15); overflow-y: auto; }
+        html, body { width: 100%; height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        .slide-container { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: ${bgStyle}; padding: 60px; }
+        .slide { width: 100%; height: 100%; padding: 60px 80px; display: none; flex-direction: column; justify-content: center; font-size: ${pPx}px; text-align: ${State.alignment}; color: ${State.currentTheme.textColor || '#1f2937'}; background: white; box-shadow: 0 0 80px rgba(0, 0, 0, 0.3); border-radius: 0; overflow-y: auto; }
         .slide.active { display: flex; }
         .slide.fade-enter { animation: fadeIn 0.5s ease-in-out; }
         .slide.slide-enter { animation: slideIn 0.5s ease-in-out; }
@@ -393,17 +399,18 @@
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes zoomIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        h1 { font-size: ${h1Size}em; color: ${State.currentTheme.primary}; margin-bottom: 40px; margin-top: 0; line-height: 1.2; font-weight: 600; text-align: ${State.titleAlignment}; }
-        h2 { font-size: ${h2Size}em; color: ${State.currentTheme.accent}; margin-bottom: 35px; margin-top: 0; line-height: 1.2; font-weight: 600; text-align: ${State.titleAlignment}; }
-        h3 { font-size: ${h3Size}em; color: ${State.currentTheme.accent}; margin-bottom: 20px; margin-top: 24px; font-weight: 600; text-align: ${State.titleAlignment}; }
-        p { font-size: ${pSize}em; line-height: 1.7; margin-bottom: 20px; }
-        ul, ol { margin-left: 40px; margin-bottom: 25px; }
-        li { font-size: ${pSize}em; line-height: 1.9; margin-bottom: 15px; }
-        strong { font-weight: 600; }
-        .nav { position: fixed; bottom: 30px; right: 30px; z-index: 100; display: flex; align-items: center; gap: 15px; background: rgba(255, 255, 255, 0.95); padding: 12px 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15); }
-        button { padding: 12px 24px; cursor: pointer; border: none; border-radius: 8px; background: #f3f4f6; color: #1f2937; font-weight: 500; font-size: 14px; transition: background 0.2s; }
-        button:hover { background: #e5e7eb; }
-        .slide-num { position: fixed; bottom: 30px; left: 30px; color: #9ca3af; font-size: 14px; }
+        h1 { font-size: ${h1Px}px; color: ${State.currentTheme.primary}; margin-bottom: 0.8em; line-height: 1.2; font-weight: 700; text-align: ${State.titleAlignment}; }
+        h2 { font-size: ${h2Px}px; color: ${State.currentTheme.accent}; margin-bottom: 0.6em; margin-top: 0.8em; line-height: 1.3; font-weight: 600; text-align: ${State.titleAlignment}; }
+        h3 { font-size: ${h3Px}px; color: ${State.currentTheme.accent}; margin-bottom: 0.5em; margin-top: 0.6em; font-weight: 600; text-align: ${State.titleAlignment}; }
+        p { font-size: ${pPx}px; line-height: 1.8; margin-bottom: 0.8em; }
+        ul, ol { margin-left: 1.5em; margin-bottom: 1em; }
+        li { font-size: ${liPx}px; line-height: 1.8; margin-bottom: 0.4em; }
+        strong { font-weight: 700; }
+        .nav { position: fixed; bottom: 20px; right: 20px; z-index: 100; display: flex; align-items: center; gap: 10px; background: rgba(0, 0, 0, 0.8); padding: 10px 16px; border-radius: 8px; }
+        .nav button { padding: 8px 16px; cursor: pointer; border: none; border-radius: 6px; background: rgba(255, 255, 255, 0.9); color: #1f2937; font-weight: 500; font-size: 14px; transition: all 0.2s; }
+        .nav button:hover { background: white; transform: scale(1.05); }
+        .nav button:disabled { opacity: 0.4; cursor: not-allowed; }
+        .slide-num { position: fixed; bottom: 20px; left: 20px; color: rgba(0, 0, 0, 0.5); font-size: 14px; background: rgba(255, 255, 255, 0.8); padding: 4px 10px; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -415,9 +422,10 @@
         </div>`).join('')}
     </div>
     <div class="nav">
-        <button onclick="prev()">← 上一頁</button>
-        <button onclick="next()">下一頁 →</button>
-        <button onclick="toggleFullscreen()">全螢幕</button>
+        <button id="prevBtn" onclick="prev()">← 上一頁</button>
+        <span id="current-page" style="color: white; font-size: 14px;">1 / ${State.slides.length}</span>
+        <button id="nextBtn" onclick="next()">下一頁 →</button>
+        <button onclick="toggleFullscreen()">⛶</button>
     </div>
     <script>
         let currentSlide = 0;
@@ -425,8 +433,8 @@
         const animation = "${State.animation}";
         
         function updateButtons() {
-            document.querySelectorAll('.nav button')[0].disabled = currentSlide === 0;
-            document.querySelectorAll('.nav button')[1].disabled = currentSlide === slides.length - 1;
+            document.getElementById('prevBtn').disabled = currentSlide === 0;
+            document.getElementById('nextBtn').disabled = currentSlide === slides.length - 1;
         }
         
         function show(n) {
