@@ -375,12 +375,6 @@
             ? `linear-gradient(135deg, ${State.currentTheme.background} 0%, ${State.currentTheme.accent}22 100%)`
             : State.currentTheme.background;
         
-        const h1Px = Math.round(parseFloat(h1Size) * 32);
-        const h2Px = Math.round(parseFloat(h2Size) * 24);
-        const h3Px = Math.round(parseFloat(h3Size) * 20);
-        const pPx = Math.round(parseFloat(pSize) * 18);
-        const liPx = pPx;
-        
         return `<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -390,34 +384,77 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { width: 100%; height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-        .slide-container { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: ${bgStyle}; padding: 60px; }
-        .slide { width: 100%; height: 100%; padding: 60px 80px; display: none; flex-direction: column; justify-content: center; font-size: ${pPx}px; text-align: ${State.alignment}; color: ${State.currentTheme.textColor || '#1f2937'}; background: white; box-shadow: 0 0 80px rgba(0, 0, 0, 0.3); border-radius: 0; overflow-y: auto; }
+        
+        .slide-container { 
+            width: 100%; 
+            height: 100%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            background: ${bgStyle}; 
+            padding: 2vh 4vw;
+        }
+        
+        .slide { 
+            position: relative;
+            width: 100%; 
+            height: 100%; 
+            display: none; 
+            flex-direction: column; 
+            justify-content: flex-start;
+            text-align: ${State.alignment}; 
+            color: ${State.currentTheme.textColor || '#1f2937'}; 
+            background: white; 
+            box-shadow: 0 0 80px rgba(0, 0, 0, 0.3); 
+            overflow: hidden;
+        }
+        
+        .slide-content {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            padding: 4vh 5vw;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        
         .slide.active { display: flex; }
         .slide.fade-enter { animation: fadeIn 0.5s ease-in-out; }
         .slide.slide-enter { animation: slideIn 0.5s ease-in-out; }
         .slide.zoom-enter { animation: zoomIn 0.5s ease-in-out; }
+        
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes zoomIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        h1 { font-size: ${h1Px}px; color: ${State.currentTheme.primary}; margin-bottom: 0.8em; line-height: 1.2; font-weight: 700; text-align: ${State.titleAlignment}; }
-        h2 { font-size: ${h2Px}px; color: ${State.currentTheme.accent}; margin-bottom: 0.6em; margin-top: 0.8em; line-height: 1.3; font-weight: 600; text-align: ${State.titleAlignment}; }
-        h3 { font-size: ${h3Px}px; color: ${State.currentTheme.accent}; margin-bottom: 0.5em; margin-top: 0.6em; font-weight: 600; text-align: ${State.titleAlignment}; }
-        p { font-size: ${pPx}px; line-height: 1.8; margin-bottom: 0.8em; }
-        ul, ol { margin-left: 1.5em; margin-bottom: 1em; }
-        li { font-size: ${liPx}px; line-height: 1.8; margin-bottom: 0.4em; }
-        strong { font-weight: 700; }
+        
+        .slide-content h1 { font-size: ${h1Size}em; color: ${State.currentTheme.primary}; margin-bottom: 0.6em; line-height: 1.2; font-weight: 700; text-align: ${State.titleAlignment}; }
+        .slide-content h2 { font-size: ${h2Size}em; color: ${State.currentTheme.accent}; margin-bottom: 0.5em; margin-top: 0.6em; line-height: 1.3; font-weight: 600; text-align: ${State.titleAlignment}; }
+        .slide-content h3 { font-size: ${h3Size}em; color: ${State.currentTheme.accent}; margin-bottom: 0.4em; margin-top: 0.5em; font-weight: 600; text-align: ${State.titleAlignment}; }
+        .slide-content p { font-size: 1em; line-height: 1.6; margin-bottom: 0.6em; }
+        .slide-content ul, .slide-content ol { margin-left: 1.2em; margin-bottom: 0.8em; }
+        .slide-content li { font-size: 1em; line-height: 1.5; margin-bottom: 0.3em; }
+        .slide-content strong { font-weight: 700; }
+        
         .nav { position: fixed; bottom: 20px; right: 20px; z-index: 100; display: flex; align-items: center; gap: 10px; background: rgba(0, 0, 0, 0.8); padding: 10px 16px; border-radius: 8px; }
         .nav button { padding: 8px 16px; cursor: pointer; border: none; border-radius: 6px; background: rgba(255, 255, 255, 0.9); color: #1f2937; font-weight: 500; font-size: 14px; transition: all 0.2s; }
         .nav button:hover { background: white; transform: scale(1.05); }
         .nav button:disabled { opacity: 0.4; cursor: not-allowed; }
+        
         .slide-num { position: fixed; bottom: 20px; left: 20px; color: rgba(0, 0, 0, 0.5); font-size: 14px; background: rgba(255, 255, 255, 0.8); padding: 4px 10px; border-radius: 4px; }
+        
+        @media (max-width: 768px) {
+            .slide-content { padding: 3vh 4vw; }
+            .slide-content h1 { font-size: ${parseFloat(h1Size)*0.7}em; }
+            .slide-content h2 { font-size: ${parseFloat(h2Size)*0.7}em; }
+            .slide-content h3 { font-size: ${parseFloat(h3Size)*0.7}em; }
+        }
     </style>
 </head>
 <body>
     <div class="slide-container">
         ${State.slides.map((slide, i) => `
         <div class="slide ${i === 0 ? 'active' : ''} ${State.animation}-enter">
-            ${slide.content}
+            <div class="slide-content">${slide.content}</div>
             <div class="slide-num">${i + 1} / ${State.slides.length}</div>
         </div>`).join('')}
     </div>
@@ -432,6 +469,30 @@
         const slides = document.querySelectorAll('.slide');
         const animation = "${State.animation}";
         
+        function autoFit() {
+            slides.forEach(slide => {
+                const content = slide.querySelector('.slide-content');
+                if (!content) return;
+                
+                const container = slide.getBoundingClientRect();
+                const contentHeight = content.scrollHeight;
+                const contentWidth = content.scrollWidth;
+                
+                let scale = 1;
+                
+                if (contentHeight > container.height) {
+                    scale = (container.height * 0.9) / contentHeight;
+                }
+                if (contentWidth > container.width) {
+                    scale = Math.min(scale, (container.width * 0.9) / contentWidth);
+                }
+                
+                scale = Math.min(Math.max(scale, 0.5), 1.5);
+                content.style.transform = 'scale(' + scale + ')';
+                content.style.transformOrigin = 'top left';
+            });
+        }
+        
         function updateButtons() {
             document.getElementById('prevBtn').disabled = currentSlide === 0;
             document.getElementById('nextBtn').disabled = currentSlide === slides.length - 1;
@@ -442,6 +503,7 @@
             slides[currentSlide].classList.add('active', animation + '-enter');
             document.getElementById('current-page').textContent = (currentSlide + 1) + ' / ' + slides.length;
             updateButtons();
+            setTimeout(autoFit, 100);
         }
         
         function next() { if (currentSlide < slides.length - 1) { currentSlide++; show(currentSlide); } }
@@ -458,7 +520,11 @@
             if (e.key === 'Escape' && document.fullscreenElement) document.exitFullscreen();
         });
         
+        window.addEventListener('resize', autoFit);
+        window.addEventListener('load', autoFit);
+        
         updateButtons();
+        setTimeout(autoFit, 200);
     <\/script>
 </body>
 </html>`;
