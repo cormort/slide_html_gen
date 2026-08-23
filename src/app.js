@@ -9,10 +9,9 @@
     // 常數與配置
     // ----------------------
     const CONFIG = {
-        ANIMATION_TYPES: ['fade', 'slide', 'zoom'],
-        ALIGNMENT_TYPES: ['left', 'center', 'right'],
         DEFAULT_THEME: 'modern-blue',
-        EXPORT_DEFAULTS: { h1: '3.5', h2: '2.5', p: '1.3' }
+        EXPORT_DEFAULTS: { h1: '3.5', h2: '2.5', p: '1.3' },
+        INPUT_DEBOUNCE_MS: 150
     };
 
     const I18N = {
@@ -20,8 +19,8 @@
         TOAST_EXPORTED: '已匯出 HTML 檔案',
         TOAST_FULLSCREEN: '全螢幕模式已啟用',
         TOAST_EXIT_FULLSCREEN: '已退出全螢幕',
+        TOAST_PAGEBREAK: '已插入分頁符',
         ERROR_NO_CONTENT: '請先輸入 Markdown 內容！',
-        PLACEHOLDER_TITLE: '我的簡報標題',
         WELCOME_TITLE: '👋 歡迎使用投影片生成器',
         WELCOME_MESSAGE: '請在左側輸入 Markdown 內容或載入範例'
     };
@@ -62,7 +61,7 @@
 ## 如何使用
 
 1. 在左側編輯器輸入內容
-2. 使用 \`- - -\` 分隔每一頁投影片
+2. 使用 \`---\` 分隔每一頁投影片
 3. 在右側調整樣式和設定
 4. 完成後即可匯出或全螢幕播放！
 
@@ -74,7 +73,7 @@
     const State = {
         slides: [],
         currentSlide: 0,
-        currentTheme: { ...THEMES['modern-blue'], name: 'modern-blue' },
+        currentTheme: { ...THEMES[CONFIG.DEFAULT_THEME], name: CONFIG.DEFAULT_THEME },
         animation: 'fade',
         alignment: 'left',
         titleAlignment: 'left',
@@ -101,16 +100,16 @@
     // ----------------------
     // 工具函式
     // ----------------------
-    function showToast(message) {
+    function showToast(message, type = '') {
         const toast = document.createElement('div');
-        toast.className = 'toast';
+        toast.className = 'toast' + (type ? ' ' + type : '');
         toast.textContent = message;
         DOM.toastContainer.appendChild(toast);
 
         requestAnimationFrame(() => toast.classList.add('show'));
         setTimeout(() => {
             toast.classList.remove('show');
-            toast.addEventListener('transitionend', () => toast.remove());
+            toast.addEventListener('transitionend', () => toast.remove(), { once: true });
         }, 3000);
     }
 
@@ -139,9 +138,10 @@
         if (!markdown || !markdown.trim()) return [];
 
         try {
-            const slideTexts = markdown.split(/---+/).filter(s => s.trim());
+            // 以「獨立一行的 ---」作為分頁符；行內文字中的 --- 不會誤切
+            const slideTexts = markdown.split(/^\s*-{3,}\s*$/m).filter(s => s.trim());
             
-            return slideTexts.map((text, index) => {
+            return slideTexts.map((text) => {
                 const lines = text.trim().split('\n');
                 let content = '';
                 let inList = false;
@@ -224,6 +224,7 @@
             `;
             thumbnailBar.style.display = 'none';
             updateNavigation();
+            updateProgressBar();
             applyTheme();
             return;
         }
@@ -232,8 +233,9 @@
         
         State.slides.forEach((slide, index) => {
             const slideDiv = document.createElement('div');
-            slideDiv.className = `slide ${index === State.currentSlide ? 'active' : ''} ${index === State.currentSlide ? State.animation + '-enter' : ''}`;
-            slideDiv.innerHTML = slide.content + `<div class="slide-number">${index + 1} / ${State.slides.length}</div>`;
+            const isActive = index === State.currentSlide;
+            slideDiv.className = `slide ${isActive ? 'active ' + State.animation + '-enter' : ''}`;
+            slideDiv.innerHTML = `<div class="slide-content">${slide.content}</div>` + `<div class="slide-number">${index + 1} / ${State.slides.length}</div>`;
             slideContainer.appendChild(slideDiv);
 
             const thumbDiv = document.createElement('div');
@@ -244,7 +246,9 @@
         });
 
         updateNavigation();
+        updateProgressBar();
         applyTheme();
+        applyPreviewSettings();
     }
 
     function applyTheme() {
@@ -263,11 +267,20 @@
             : State.currentTheme.background;
     }
 
+    // 預覽設定：對齊 + 字體大小（與匯出共用同一組數值，所見即所得）
     function applyPreviewSettings() {
         const slideElements = DOM.slideContainer.querySelectorAll('.slide:not(#emptySlide)');
-        
+        const h1 = validateFontSize(document.getElementById('exportH1Size')?.value, CONFIG.EXPORT_DEFAULTS.h1);
+        const h2 = validateFontSize(document.getElementById('exportH2Size')?.value, CONFIG.EXPORT_DEFAULTS.h2);
+        const p = validateFontSize(document.getElementById('exportPSize')?.value, CONFIG.EXPORT_DEFAULTS.p);
+        const h3 = (parseFloat(h2) * 0.72).toFixed(2);
+
         slideElements.forEach(slide => {
             slide.style.textAlign = State.alignment;
+            slide.style.setProperty('--slide-h1-size', h1 + 'em');
+            slide.style.setProperty('--slide-h2-size', h2 + 'em');
+            slide.style.setProperty('--slide-h3-size', h3 + 'em');
+            slide.style.setProperty('--slide-p-size', p + 'em');
             slide.querySelectorAll('h1, h2, h3').forEach(h => h.style.textAlign = State.titleAlignment);
         });
     }
@@ -314,18 +327,21 @@
         const { prevBtn, nextBtn, slideCounter } = DOM;
         const total = State.slides.length;
         
+        if (total === 0) {
+            prevBtn.disabled = true;
+            nextBtn.disabled = true;
+            slideCounter.textContent = '0 / 0';
+            return;
+        }
+        
         prevBtn.disabled = State.currentSlide === 0;
         nextBtn.disabled = State.currentSlide === total - 1;
-        
-        if (total > 0) {
-            slideCounter.textContent = `${State.currentSlide + 1} / ${total}`;
-        } else {
-            slideCounter.textContent = '0 / 0';
-        }
+        slideCounter.textContent = `${State.currentSlide + 1} / ${total}`;
     }
 
     function updateProgressBar() {
         const { progressBar } = DOM;
+        if (!progressBar) return;
         const total = State.slides.length;
         
         if (total > 0) {
@@ -337,26 +353,47 @@
     }
 
     // ----------------------
+    // 輸入防抖
+    // ----------------------
+    let renderTimeout = null;
+
+    function renderFromInput() {
+        State.slides = parseMarkdown(DOM.markdownInput.value);
+        State.currentSlide = 0;
+        renderSlides();
+    }
+
+    // 匯出/操作前先套用尚未執行的防抖渲染，避免讀到舊內容
+    function flushRender() {
+        if (renderTimeout !== null) {
+            clearTimeout(renderTimeout);
+            renderTimeout = null;
+            renderFromInput();
+        }
+    }
+
+    // ----------------------
     // 匯出功能
     // ----------------------
     function exportToHTML() {
         if (State.slides.length === 0) {
-            alert(I18N.ERROR_NO_CONTENT);
+            showToast(I18N.ERROR_NO_CONTENT, 'error');
             return;
         }
+        flushRender();
 
         let fileName = 'presentation.html';
-        if (State.slides.length > 0) {
-            const firstSlideContent = State.slides[0].content;
-            const titleMatch = firstSlideContent.match(/<h1>(.*?)<\/h1>/i);
-            if (titleMatch && titleMatch[1]) {
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = titleMatch[1];
-                let cleanTitle = (tempDiv.textContent || tempDiv.innerText || '').trim();
-                cleanTitle = cleanTitle.replace(/[<>:"/\\|?*]+/g, '_');
-                if (cleanTitle) {
-                    fileName = `${cleanTitle}.html`;
-                }
+        let docTitle = '我的簡報';
+
+        const firstSlideContent = State.slides[0].content;
+        const titleMatch = firstSlideContent.match(/<h1>(.*?)<\/h1>/i);
+        if (titleMatch && titleMatch[1]) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = titleMatch[1];
+            const cleanTitle = (tempDiv.textContent || tempDiv.innerText || '').trim().replace(/[<>:"/\\|?*]+/g, '_');
+            if (cleanTitle) {
+                fileName = `${cleanTitle}.html`;
+                docTitle = cleanTitle;
             }
         }
         
@@ -365,12 +402,12 @@
         const exportP = validateFontSize(document.getElementById('exportPSize')?.value, CONFIG.EXPORT_DEFAULTS.p);
         const exportH3 = (parseFloat(exportH2) * 0.72).toFixed(2);
         
-        const htmlContent = generateExportHTML(exportH1, exportH2, exportH3, exportP);
+        const htmlContent = generateExportHTML(exportH1, exportH2, exportH3, exportP, docTitle);
         downloadFile(fileName, htmlContent);
         showToast(I18N.TOAST_EXPORTED);
     }
 
-    function generateExportHTML(h1Size, h2Size, h3Size, pSize) {
+    function generateExportHTML(h1Size, h2Size, h3Size, pSize, docTitle = '我的簡報') {
         const bgStyle = State.backgroundStyle === 'gradient'
             ? `linear-gradient(135deg, ${State.currentTheme.background} 0%, ${State.currentTheme.accent}22 100%)`
             : State.currentTheme.background;
@@ -380,7 +417,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的簡報</title>
+    <title>${docTitle}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { width: 100%; height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
@@ -546,17 +583,32 @@
     function toggleFullscreen() {
         const container = document.querySelector('.slide-container');
         if (!document.fullscreenElement) {
-            container.requestFullscreen().then(() => showToast(I18N.TOAST_FULLSCREEN));
+            container.requestFullscreen()
+                .then(() => showToast(I18N.TOAST_FULLSCREEN))
+                .catch(() => {});
         } else {
-            document.exitFullscreen().then(() => showToast(I18N.TOAST_EXIT_FULLSCREEN));
+            document.exitFullscreen()
+                .then(() => showToast(I18N.TOAST_EXIT_FULLSCREEN))
+                .catch(() => {});
         }
     }
 
     function setupPresentationMode() {
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowRight' || e.key === ' ') nextSlide();
-            if (e.key === 'ArrowLeft') previousSlide();
-            if (e.key === 'Escape' && document.fullscreenElement) {
+            // 在輸入框/下拉選單內不攔截按鍵，避免干擾編輯
+            const tag = e.target.tagName;
+            if (tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT' || e.target.isContentEditable) {
+                return;
+            }
+            if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                nextSlide();
+            } else if (e.key === ' ') {
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                previousSlide();
+            } else if (e.key === 'Escape' && document.fullscreenElement) {
                 document.exitFullscreen();
             }
         });
@@ -589,11 +641,10 @@
     // 事件綁定
     // ----------------------
     function bindEvents() {
-        // Markdown 輸入
-        DOM.markdownInput?.addEventListener('input', (e) => {
-            State.slides = parseMarkdown(e.target.value);
-            State.currentSlide = 0;
-            renderSlides();
+        // Markdown 輸入（防抖渲染）
+        DOM.markdownInput?.addEventListener('input', () => {
+            clearTimeout(renderTimeout);
+            renderTimeout = setTimeout(renderFromInput, CONFIG.INPUT_DEBOUNCE_MS);
         });
 
         // 導航按鈕
@@ -635,7 +686,7 @@
             input.focus();
             
             input.dispatchEvent(new Event('input', { bubbles: true }));
-            showToast('已插入分頁符');
+            showToast(I18N.TOAST_PAGEBREAK);
         });
 
         // 動畫選擇
@@ -662,7 +713,7 @@
             applyTheme();
         });
 
-        // 預覽設定變更
+        // 匯出字體大小變更 → 同步套用至預覽（所見即所得）
         ['exportH1Size', 'exportH2Size', 'exportPSize'].forEach(id => {
             document.getElementById(id)?.addEventListener('input', applyPreviewSettings);
         });
